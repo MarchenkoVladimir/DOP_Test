@@ -222,6 +222,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _eraseRadius: 20
+  _colliderUpdateDelay: 0.3
 --- !u!114 &146688598
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -586,6 +587,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _eraseRadius: 20
+  _colliderUpdateDelay: 0.3
 --- !u!114 &907604021
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,11 +1,10 @@
-using System;
-using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class ErasableSprite : MonoBehaviour
 { 
     [SerializeField] private float _eraseRadius = 20f;
+    [SerializeField] private float _colliderUpdateDelay = 0.3f;
 
     private SpriteRenderer _spriteRenderer;
     private Texture2D _erasableTexture;
@@ -14,6 +13,7 @@ public class ErasableSprite : MonoBehaviour
 
     private Vector2 _lastErasePoint;
     private bool _isErasing;
+    private Color32[] _texturePixels;
 
     private void Awake()
     {
@@ -30,58 +30,49 @@ public class ErasableSprite : MonoBehaviour
     {
         HandleInput();
     }
+
     private void InitializeTexture()
     {
         _originalSprite = _spriteRenderer.sprite;
-    
-        _erasableTexture = new Texture2D(_originalSprite.texture.width, _originalSprite.texture.height, TextureFormat.RGBA32, false)
+        var sourceTexture = _originalSprite.texture;
+
+        _erasableTexture = new Texture2D(sourceTexture.width, sourceTexture.height, TextureFormat.RGBA32, false)
         {
             filterMode = FilterMode.Bilinear,
             wrapMode = TextureWrapMode.Clamp
         };
-    
-        _erasableTexture.SetPixels(_originalSprite.texture.GetPixels());
+
+        _texturePixels = sourceTexture.GetPixels32();
+        _erasableTexture.SetPixels32(_texturePixels);
         _erasableTexture.Apply();
-    
-        UpdateSprite();
+        
     }
-    
+
     private void HandleInput()
     {
 #if UNITY_EDITOR
-        if (Input.GetMouseButtonDown(0))
-            _isErasing = true;
-
-        if (Input.GetMouseButtonUp(0))
-        {
-            _isErasing = false;
-            _lastErasePoint = Vector2.zero;
-        }
-            
-
-        if (_isErasing)
-            EraseAtMousePosition();
+        if (Input.GetMouseButtonDown(0)) _isErasing = true;
+        if (Input.GetMouseButtonUp(0)) StopErasing();
+        if (_isErasing) EraseAtMousePosition();
 #endif
 
 #if UNITY_ANDROID || UNITY_IOS
-    if (Input.touchCount > 0)
-    {
-        Touch touch = Input.GetTouch(0);
-
-        if (touch.phase == TouchPhase.Began)
-            _isErasing = true;
-
-        if (touch.phase == TouchPhase.Ended)
+        if (Input.touchCount > 0)
         {
-            _isErasing = false;
-            _lastErasePoint = Vector2.zero;
+            Touch touch = Input.GetTouch(0);
+            if (touch.phase == TouchPhase.Began) _isErasing = true;
+            if (touch.phase == TouchPhase.Ended) StopErasing();
+            if (_isErasing) EraseAtTouchPosition(touch.position);
         }
-
-        if (_isErasing)
-            EraseAtTouchPosition(touch.position);
-    }
 #endif
     }
+
+    private void StopErasing()
+    {
+        _isErasing = false;
+        _lastErasePoint = Vector2.zero;
+    }
+
 
     private void EraseAtMousePosition()
     {
@@ -95,6 +86,7 @@ public class ErasableSprite : MonoBehaviour
         Vector2 worldPosition = Camera.main.ScreenToWorldPoint(touchPosition);
         Vector2 localPos = transform.InverseTransformPoint(worldPosition);
         UpdateTexturePosition(localPos);
+        _colliderGenerator.RefreshPolygonCollider();
     }
 
     private void UpdateTexturePosition(Vector2 localPos)
@@ -104,21 +96,17 @@ public class ErasableSprite : MonoBehaviour
             Mathf.Clamp((localPos.y / _originalSprite.bounds.size.y + 0.5f) * _erasableTexture.height, 0, _erasableTexture.height - 1)
         );
 
-        if (_lastErasePoint == Vector2.zero)
-            _lastErasePoint = texturePos;
+        if (_lastErasePoint == Vector2.zero) _lastErasePoint = texturePos;
 
         EraseBetweenPoints(_lastErasePoint, texturePos);
         _lastErasePoint = texturePos;
 
-        _erasableTexture.Apply();
-        UpdateSprite();
-        _colliderGenerator.RefreshPolygonCollider();
+        ApplyTextureChanges();
     }
-    
+
     private void EraseBetweenPoints(Vector2 start, Vector2 end)
     {
-        float distance = Vector2.Distance(start, end);
-        int steps = Mathf.CeilToInt(distance);
+        int steps = Mathf.CeilToInt(Vector2.Distance(start, end));
 
         for (int i = 0; i <= steps; i++)
         {
@@ -126,31 +114,33 @@ public class ErasableSprite : MonoBehaviour
             EraseCircle(position);
         }
     }
-    
+
     private void EraseCircle(Vector2 center)
     {
         int radius = Mathf.RoundToInt(_eraseRadius);
-        int xStart = Mathf.Clamp((int)(center.x - radius), 0, _erasableTexture.width);
-        int xEnd = Mathf.Clamp((int)(center.x + radius), 0, _erasableTexture.width);
-        int yStart = Mathf.Clamp((int)(center.y - radius), 0, _erasableTexture.height);
-        int yEnd = Mathf.Clamp((int)(center.y + radius), 0, _erasableTexture.height);
+        int xStart = Mathf.Clamp((int)(center.x - radius), 0, _erasableTexture.width - 1);
+        int xEnd = Mathf.Clamp((int)(center.x + radius), 0, _erasableTexture.width - 1);
+        int yStart = Mathf.Clamp((int)(center.y - radius), 0, _erasableTexture.height - 1);
+        int yEnd = Mathf.Clamp((int)(center.y + radius), 0, _erasableTexture.height - 1);
 
-        for (int x = xStart; x < xEnd; x++)
+        for (int y = yStart; y <= yEnd; y++)
         {
-            for (int y = yStart; y < yEnd; y++)
+            for (int x = xStart; x <= xEnd; x++)
             {
                 if (Vector2.Distance(center, new Vector2(x, y)) < radius)
                 {
-                    _erasableTexture.SetPixel(x, y, Color.clear);
+                    _texturePixels[y * _erasableTexture.width + x] = Color.clear;
                 }
             }
         }
     }
-    
-    private void UpdateSprite()
+
+    private void ApplyTextureChanges()
     {
+        _erasableTexture.SetPixels32(_texturePixels);
+        _erasableTexture.Apply();
+        
         Rect rect = new Rect(0, 0, _erasableTexture.width, _erasableTexture.height);
-        Sprite newSprite = Sprite.Create(_erasableTexture, rect, new Vector2(0.5f, 0.5f), 100);
-        _spriteRenderer.sprite = newSprite;
+        _spriteRenderer.sprite = Sprite.Create(_erasableTexture, rect, new Vector2(0.5f, 0.5f), 100);
     }
 }
