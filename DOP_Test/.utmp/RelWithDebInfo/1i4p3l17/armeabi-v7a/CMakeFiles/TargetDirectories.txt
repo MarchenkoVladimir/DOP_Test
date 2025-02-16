@@ -1,0 +1,5 @@
+/Users/vladimir/Develop/DOP_Test/DOP_Test/.utmp/RelWithDebInfo/1i4p3l17/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/vladimir/Develop/DOP_Test/DOP_Test/.utmp/RelWithDebInfo/1i4p3l17/armeabi-v7a/CMakeFiles/rebuild_cache.dir
+/Users/vladimir/Develop/DOP_Test/DOP_Test/.utmp/RelWithDebInfo/1i4p3l17/armeabi-v7a/FramePacing/CMakeFiles/swappywrapper.dir
+/Users/vladimir/Develop/DOP_Test/DOP_Test/.utmp/RelWithDebInfo/1i4p3l17/armeabi-v7a/FramePacing/CMakeFiles/edit_cache.dir
+/Users/vladimir/Develop/DOP_Test/DOP_Test/.utmp/RelWithDebInfo/1i4p3l17/armeabi-v7a/FramePacing/CMakeFiles/rebuild_cache.dir
