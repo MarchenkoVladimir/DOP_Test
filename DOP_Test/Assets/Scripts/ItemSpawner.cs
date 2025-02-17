@@ -3,7 +3,6 @@ using UnityEngine.Serialization;
 
 public class ItemSpawner : MonoBehaviour
 {
-    [FormerlySerializedAs("itemPrefab")] [Header("Настройки спавна")]
     [SerializeField] private GameObject _itemPrefab; 
     [SerializeField] private float _spawnInterval = 2f;
     [SerializeField] private Vector2 _spawnAreaSize = new Vector2(5f, 5f); 
